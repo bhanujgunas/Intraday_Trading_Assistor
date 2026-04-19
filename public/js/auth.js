@@ -1,7 +1,18 @@
 // auth.js — Supabase Google OAuth (no ES modules — global Auth object)
 
-const SUPABASE_URL      = Netlify.env.get("SUPABASE_URL");
-const SUPABASE_ANON_KEY = Netlify.env.get("SUPABASE_ANON_KEY");
+let supabase;
+
+async function initSupabase() {
+  const res = await fetch('/.netlify/functions/config');
+  const { supabaseUrl, supabaseAnonKey } = await res.json();
+
+  supabase = window.supabase.createClient(
+    supabaseUrl,
+    supabaseAnonKey
+  );
+}
+
+initSupabase();
 
 function isValidUrl(url) {
   try {
