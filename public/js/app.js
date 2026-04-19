@@ -352,14 +352,30 @@ function onSignOut(){
   document.getElementById("app-screen").style.display="none";
   tradesCache=[];
 }
+function waitForAuth() {
+  return new Promise((resolve, reject) => {
+    let attempts = 0;
+
+    const interval = setInterval(() => {
+      if (window.Auth && typeof window.Auth.initAuth === "function") {
+        clearInterval(interval);
+        resolve(window.Auth);
+      }
+
+      attempts++;
+      if (attempts > 50) { // ~5 seconds
+        clearInterval(interval);
+        reject(new Error("Auth failed to load"));
+      }
+    }, 100);
+  });
+}
+
 (async () => {
-  if (window.Auth && typeof window.Auth.initAuth === "function") {
-    try {
-      await window.Auth.initAuth(onAuth, onSignOut);
-    } catch (err) {
-      console.error("Failed to initialize Auth:", err);
-    }
-  } else {
-    console.error("Auth is not loaded yet. Make sure public/js/auth.js is included before app.js.");
+  try {
+    const Auth = await waitForAuth();
+    await Auth.initAuth(onAuth, onSignOut);
+  } catch (err) {
+    console.error(err);
   }
 })();
