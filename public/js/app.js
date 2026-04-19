@@ -379,3 +379,21 @@ function waitForAuth() {
     console.error(err);
   }
 })();
+
+document.addEventListener("DOMContentLoaded", () => {
+  const btn = document.getElementById("loginBtn");
+
+  if (!btn) {
+    console.error("loginBtn not found");
+    return;
+  }
+
+  btn.addEventListener("click", () => {
+    if (!window.Auth) {
+      console.error("Auth not ready");
+      return;
+    }
+
+    Auth.signInWithGoogle();
+  });
+});

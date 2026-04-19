@@ -18,18 +18,12 @@ content="
 
   img-src 'self' data:;
 
-  font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com;
+  font-src 'self' https://cdnjs.cloudflare.com;
 
   connect-src 'self' *.supabase.co *.anthropic.com https://cdnjs.cloudflare.com;
 
   frame-src https://accounts.google.com;
 ">
-<script>
-  document.getElementById("loginBtn")
-  .addEventListener("click", () => {
-    Auth.signInWithGoogle();
-  });
-</script>
 </head>
 <body>
 
