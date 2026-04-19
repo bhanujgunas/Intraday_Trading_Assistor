@@ -1,0 +1,20 @@
+{
+  "name": "intraradar",
+  "version": "2.0.0",
+  "description": "AI-powered NSE intraday stock assistant for Groww traders",
+  "scripts": {
+    "dev": "netlify dev",
+    "build": "echo 'Static build — no bundler needed'",
+    "deploy": "netlify deploy --prod"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "netlify-cli": "^17.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

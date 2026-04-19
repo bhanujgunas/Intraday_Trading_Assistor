@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IntraRadar — NSE Intraday Assistant</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📡</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     AUTH SCREEN — shown until Google sign-in
+     ══════════════════════════════════════════ -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">📡 Intra<span>Radar</span></div>
+    <div class="auth-tagline">AI-powered NSE intraday assistant<br>for Groww traders</div>
+    <div class="auth-features">
+      <div class="af">📡 Live NSE prices via Yahoo Finance</div>
+      <div class="af">🤖 AI scan scoring + deep analysis</div>
+      <div class="af">📋 Trade log with auto P&L + Groww charges</div>
+      <div class="af">☁ Cloud sync across all your devices</div>
+    </div>
+    <button class="google-btn" onclick="Auth.signInWithGoogle()">
+      <svg width="18" height="18" viewBox="0 0 48 48" style="margin-right:10px;vertical-align:middle">
+        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+      </svg>
+      Continue with Google
+    </button>
+    <div class="auth-note">Your trades are private — secured with Row Level Security.</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     MAIN APP — shown after auth
+     ══════════════════════════════════════════ -->
+<div id="app-screen" style="display:none">
+
+  <header class="topbar">
+    <div class="logo">Intra<span class="logo-acc">Radar</span> <span class="logo-sub">NSE · Groww</span></div>
+    <div class="topbar-right">
+      <span class="mkt-pill"><span class="pulse" id="mkt-dot"></span><span id="mkt-label">NSE</span></span>
+      <span class="mono" id="clock" style="font-size:11px;color:var(--txt2)"></span>
+      <span id="sync-status" class="sync-ok">✓ Synced</span>
+      <span id="user-info" style="font-size:12px;color:var(--txt2)"></span>
+      <button class="btn btn-xs btn-outline" onclick="exportExcel()">↓ Excel</button>
+      <button class="btn btn-xs btn-outline" onclick="Auth.signOut()">Sign out</button>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="scanner">📡 Scanner</button>
+    <button class="tab" data-tab="ai">🤖 AI Analyst</button>
+    <button class="tab" data-tab="log">📋 Trade Log</button>
+    <button class="tab" data-tab="pnl">📊 P&L</button>
+    <button class="tab" data-tab="history">🕐 Scan History</button>
+    <button class="tab" data-tab="calc">🧮 Charges</button>
+    <button class="tab" data-tab="settings">⚙ Settings</button>
+  </nav>
+
+  <!-- SCANNER -->
+  <section class="pane active" id="pane-scanner">
+    <div class="notice notice-info">Live NSE prices fetched server-side via Yahoo Finance (no CORS). AI scoring by Claude. Green ● = live, grey ~ = estimated.</div>
+    <div class="toolbar">
+      <div class="ig"><label>Capital (₹)</label><input class="inp" id="cap" type="number" value="50000" min="1000" step="1000"></div>
+      <div class="ig"><label>Risk / Trade (%)</label><input class="inp" id="risk-pct" type="number" value="1.5" step="0.5" min="0.5" max="5" style="width:80px"></div>
+      <div class="ig">
+        <label>Watchlist</label>
+        <select class="inp" id="watchlist-sel" style="width:160px">
+          <option value="default">Top 10 NSE</option>
+          <option value="banking">Banking</option>
+          <option value="it">IT / Tech</option>
+          <option value="auto">Auto</option>
+          <option value="pharma">Pharma</option>
+          <option value="energy">Energy / PSU</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="Scanner.run()">Scan Market</button>
+    </div>
+    <div id="scan-spin" class="spinner" style="display:none"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span>Fetching live prices + AI scoring...</span></div>
+    <div id="scan-notice" class="notice notice-warn" style="display:none"></div>
+    <div id="scan-results" style="display:none">
+      <div class="srow srow-hdr"><div>Symbol</div><div>LTP</div><div>Chg %</div><div>AI Score</div><div>Signal</div><div>Rec Qty</div></div>
+      <div id="slist"></div>
+    </div>
+    <div id="scan-empty" class="empty-state">Hit <strong>Scan Market</strong> to get AI-ranked intraday picks with live NSE prices.</div>
+    <div id="det" class="det-card" style="display:none">
+      <div class="det-header"><div id="det-hd"></div><button class="btn btn-outline btn-xs" onclick="document.getElementById('det').style.display='none'">✕</button></div>
+      <div id="det-body"></div>
+    </div>
+  </section>
+
+  <!-- AI ANALYST -->
+  <section class="pane" id="pane-ai">
+    <div class="notice notice-info">Claude analyses the stock with its live price — technicals, entry/exit zones, Groww charges, net P&L at each target.</div>
+    <div class="grid-2" style="margin-bottom:10px">
+      <div class="ig"><label>NSE Symbol</label><input class="inp" id="ai-sym" placeholder="RELIANCE" value="RELIANCE"></div>
+      <div class="ig"><label>Capital (₹)</label><input class="inp" id="ai-cap" type="number" value="50000"></div>
+    </div>
+    <div class="ig" style="margin-bottom:10px">
+      <label>Question / context</label>
+      <textarea class="inp" id="ai-q" rows="2" placeholder="Should I buy today? What's the ideal entry and exit for intraday?"></textarea>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="AIAnalyst.run()">Analyse with AI</button>
+      <button class="btn btn-outline" onclick="AIAnalyst.quick('Top 3 intraday picks from Nifty 50 today with entry, target, SL')">Nifty Picks</button>
+      <button class="btn btn-outline" onclick="AIAnalyst.quick('Best risk-reward intraday setups on NSE right now')">Risk-Reward Setups</button>
+    </div>
+    <div id="ai-spin" class="spinner" style="display:none;margin-top:12px"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span>Analysing with Claude...</span></div>
+    <div id="ai-out" style="display:none"></div>
+  </section>
+
+  <!-- TRADE LOG -->
+  <section class="pane" id="pane-log">
+    <div class="toolbar">
+      <div><div style="font-weight:600">Trade Log</div><div class="sub">Click any cell to edit inline · All charges auto-recalculate · Synced to Supabase</div></div>
+      <div style="display:flex;gap:7px">
+        <button class="btn btn-success btn-sm" onclick="TradeLog.showForm()">+ Add Trade</button>
+        <button class="btn btn-outline btn-sm" onclick="exportExcel()">↓ Excel</button>
+      </div>
+    </div>
+    <div id="log-form" class="add-form" style="display:none">
+      <div class="form-title">New Trade</div>
+      <div class="grid-3" style="margin-bottom:8px">
+        <div class="ig"><label>Symbol *</label><input class="inp" id="f-sym" placeholder="RELIANCE"></div>
+        <div class="ig"><label>Buy Price ₹ *</label><input class="inp" id="f-buy" type="number" step="0.05" placeholder="2450.50"></div>
+        <div class="ig"><label>Qty *</label><input class="inp" id="f-qty" type="number" placeholder="10"></div>
+      </div>
+      <div class="grid-3" style="margin-bottom:8px">
+        <div class="ig"><label>Sell Price ₹ (blank = open)</label><input class="inp" id="f-sell" type="number" step="0.05" placeholder=""></div>
+        <div class="ig"><label>Date *</label><input class="inp" id="f-date" type="date"></div>
+        <div class="ig"><label>Type</label><select class="inp" id="f-type"><option>Intraday MIS</option><option>BTST</option><option>Short Sell</option><option>Delivery CNC</option></select></div>
+      </div>
+      <div class="ig" style="margin-bottom:10px"><label>Notes</label><input class="inp" id="f-notes" placeholder="e.g. breakout entry, news trade, RSI 65"></div>
+      <div style="display:flex;gap:7px">
+        <button class="btn btn-success btn-sm" onclick="TradeLog.save()">Save Trade</button>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('log-form').style.display='none'">Cancel</button>
+      </div>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="tbl">
+        <thead><tr><th>Date</th><th>Symbol</th><th>Type</th><th>Qty</th><th>Buy ₹</th><th>Sell ₹</th><th>Notes</th><th>Gross P&L</th><th>Charges ₹</th><th>Net P&L</th><th>Status</th><th></th></tr></thead>
+        <tbody id="log-body"></tbody>
+      </table>
+      <div id="log-empty" class="empty-state">No trades logged yet. Click "+ Add Trade" to start tracking.</div>
+    </div>
+  </section>
+
+  <!-- P&L DASHBOARD -->
+  <section class="pane" id="pane-pnl">
+    <div style="font-weight:600;margin-bottom:12px">P&L Dashboard</div>
+    <div class="grid-4" style="margin-bottom:10px">
+      <div class="metric-card"><div class="mlbl">Total Net P&L</div><div class="mval" id="d-total">₹0</div></div>
+      <div class="metric-card"><div class="mlbl">Win Rate</div><div class="mval cyan" id="d-wr">—</div><div class="wbar"><div class="wfill" id="d-wrb" style="width:0%"></div></div></div>
+      <div class="metric-card"><div class="mlbl">Avg Net / Trade</div><div class="mval" id="d-avg">₹0</div></div>
+      <div class="metric-card"><div class="mlbl">Total Charges</div><div class="mval amber" id="d-ch">₹0</div></div>
+    </div>
+    <div class="grid-4" style="margin-bottom:12px">
+      <div class="metric-card"><div class="mlbl">Closed Trades</div><div class="mval" id="d-n">0</div></div>
+      <div class="metric-card"><div class="mlbl">Winning</div><div class="mval green" id="d-w">0</div></div>
+      <div class="metric-card"><div class="mlbl">Best Trade</div><div class="mval green" id="d-best">₹0</div></div>
+      <div class="metric-card"><div class="mlbl">Worst Trade</div><div class="mval red" id="d-worst">₹0</div></div>
+    </div>
+    <div class="card"><div class="mlbl" style="margin-bottom:10px">Monthly Net P&L (₹)</div>
+      <div style="position:relative;height:180px"><canvas id="pnl-chart" role="img" aria-label="Monthly P&L chart"></canvas></div>
+    </div>
+  </section>
+
+  <!-- SCAN HISTORY -->
+  <section class="pane" id="pane-history">
+    <div style="font-weight:600;margin-bottom:12px">Scan History</div>
+    <div class="notice notice-info">Last 20 scans saved to your cloud account. Top 3 picks shown per scan.</div>
+    <div id="history-list"><div class="empty-state">No scan history yet.</div></div>
+  </section>
+
+  <!-- CHARGES CALC -->
+  <section class="pane" id="pane-calc">
+    <div style="font-weight:600;margin-bottom:12px">Groww NSE Charges Calculator</div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="mlbl" style="margin-bottom:10px">Trade Inputs</div>
+        <div class="ig"><label>Buy Price (₹)</label><input class="inp" id="c-b" type="number" value="2450" step="0.05" oninput="Charges.calc()"></div>
+        <div class="ig"><label>Sell Price (₹)</label><input class="inp" id="c-s" type="number" value="2490" step="0.05" oninput="Charges.calc()"></div>
+        <div class="ig"><label>Quantity</label><input class="inp" id="c-q" type="number" value="10" oninput="Charges.calc()"></div>
+        <div class="ig"><label>Trade Type</label>
+          <select class="inp" id="c-t" onchange="Charges.calc()">
+            <option value="intraday">Intraday MIS</option>
+            <option value="delivery">Delivery CNC</option>
+          </select>
+        </div>
+      </div>
+      <div class="card"><div class="mlbl" style="margin-bottom:10px">Charge Breakdown</div><div id="c-out"></div></div>
+    </div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section class="pane" id="pane-settings">
+    <div style="font-weight:600;margin-bottom:12px">Settings <span class="sub">— synced to your account</span></div>
+    <div class="card" style="max-width:500px">
+      <div class="ig"><label>Default Capital (₹)</label><input class="inp" id="s-capital" type="number" value="50000"></div>
+      <div class="ig"><label>Default Risk per Trade (%)</label><input class="inp" id="s-risk" type="number" value="1.5" step="0.5"></div>
+      <div class="ig"><label>Default Watchlist</label>
+        <select class="inp" id="s-watchlist">
+          <option value="default">Top 10 NSE</option><option value="banking">Banking</option>
+          <option value="it">IT / Tech</option><option value="auto">Auto</option>
+          <option value="pharma">Pharma</option><option value="energy">Energy / PSU</option>
+        </select>
+      </div>
+      <div class="ig"><label>Theme</label>
+        <select class="inp" id="s-theme"><option value="dark">Dark</option><option value="light">Light (coming soon)</option></select>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="btn btn-primary btn-sm" onclick="Settings.save()">Save Settings</button>
+        <span id="s-saved" style="display:none;color:var(--green);font-size:11px">✓ Saved to cloud</span>
+      </div>
+    </div>
+  </section>
+
+</div><!-- /app-screen -->
+
+<!-- Supabase JS v2 -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<!-- Chart.js + SheetJS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- App scripts -->
+<script src="js/auth.js" type="module"></script>
+<script src="js/app.js" type="module"></script>
+</body>
+</html>
