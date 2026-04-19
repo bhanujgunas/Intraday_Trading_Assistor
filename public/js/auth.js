@@ -1,12 +1,12 @@
 // auth.js — FINAL CLEAN VERSION
 
-let supabase = null;
+let sbClient = null;
 let _session = null;
 let _user = null;
 
 // 🔹 Get Supabase client (lazy + async)
 async function getSB() {
-  if (supabase) return supabase;
+  if (sbClient) return sbClient;
 
   const res = await fetch('/.netlify/functions/config');
   if (!res.ok) throw new Error("Failed to load config");
@@ -17,7 +17,7 @@ async function getSB() {
     throw new Error("Missing Supabase config");
   }
 
-  supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey, {
+  sbClient = window.supabase.createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       autoRefreshToken: true,
       persistSession: true,
@@ -25,7 +25,7 @@ async function getSB() {
     },
   });
 
-  return supabase;
+  return sbClient;
 }
 
 // 🔹 Auth state helpers
